@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "chrome-paths": "^1.0.1",
+    "puppeteer": "^22.6.4",
+    "puppeteer-core": "^22.6.3"
+  }
+}
