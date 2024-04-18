@@ -300,43 +300,49 @@ const fn = async () => {
 
   console.log("准备下载视频和图片");
   if (!fs.existsSync(infourl + info.title)) fs.mkdirSync(infourl + info.title);
-  console.log("下载头图视频和图片");
+  // console.log("下载头图视频和图片");
 
-  if (!fs.existsSync(infourl + info.title + "/头图"))
-    fs.mkdirSync(infourl + info.title + "/头图");
-  await Promise.all(
-    info.headImg.map(async (item, index) => {
-      const fileURL = item;
-      const fileName = index + ".png";
-      const downloadPath = infourl + info.title + "/头图/" + fileName;
-      await requestPromise(fileURL, downloadPath);
-    })
-  );
+  // if (!fs.existsSync(infourl + info.title + "/头图"))
+  //   fs.mkdirSync(infourl + info.title + "/头图");
+  // await Promise.all(
+  //   info.headImg.map(async (item, index) => {
+  //     const fileURL = item;
+  //     const fileName = index + ".png";
+  //     const downloadPath = infourl + info.title + "/头图/" + fileName;
+  //     await requestPromise(fileURL, downloadPath);
+  //   })
+  // );
 
-  console.log("下载sku图片");
-  if (!fs.existsSync(infourl + info.title + "/sku图片"))
-    fs.mkdirSync(infourl + info.title + "/sku图片");
+  // console.log("下载sku图片");
+  // if (!fs.existsSync(infourl + info.title + "/sku图片"))
+  //   fs.mkdirSync(infourl + info.title + "/sku图片");
 
-  await Promise.all(
-    info.skus.map(async (item, index) => {
-      const fileURL = item.img;
-      const fileName = item.name + ".png";
-      const downloadPath = infourl + info.title + "/sku图片/" + fileName;
-      await requestPromise(fileURL, downloadPath);
-    })
-  );
+  // await Promise.all(
+  //   info.skus.map(async (item, index) => {
+  //     const fileURL = item.img;
+  //     const fileName = item.name + ".png";
+  //     const downloadPath = infourl + info.title + "/sku图片/" + fileName;
+  //     await requestPromise(fileURL, downloadPath);
+  //   })
+  // );
 
-  console.log("下载商品详情图片");
-  if (!fs.existsSync(infourl + info.title + "/商品详情图片"))
-    fs.mkdirSync(infourl + info.title + "/商品详情图片");
+  // console.log("下载商品详情图片");
+  // if (!fs.existsSync(infourl + info.title + "/商品详情图片"))
+  //   fs.mkdirSync(infourl + info.title + "/商品详情图片");
 
-  await Promise.all(
-    info.detailImgs.map(async (item, index) => {
-      const fileURL = item;
-      const fileName = index + ".png";
-      const downloadPath = infourl + info.title + "/商品详情图片/" + fileName;
-      await requestPromise(fileURL, downloadPath);
-    })
+  // await Promise.all(
+  //   info.detailImgs.map(async (item, index) => {
+  //     const fileURL = item;
+  //     const fileName = index + ".png";
+  //     const downloadPath = infourl + info.title + "/商品详情图片/" + fileName;
+  //     await requestPromise(fileURL, downloadPath);
+  //   })
+  // );
+
+  await requestPromise(info.video, infourl + info.title + "/头图视频.mp4");
+  await requestPromise(
+    info.detailVieo,
+    infourl + info.title + "/商品详情视频.mp4"
   );
 
   console.log(url);
