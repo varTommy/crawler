@@ -1,6 +1,7 @@
 const puppeteer = require("puppeteer");
 const { input } = require("@inquirer/prompts");
 const fs = require("fs");
+const https = require("https");
 const xlsx = require("node-xlsx");
 
 let infourl = ""; // 文件地址
@@ -245,43 +246,98 @@ const geturl = async () => {
     message: "输入商品的地址：",
   });
 };
+// 发请求下载图片并保存到本地
+const requestPromise = (fileURL, downloadPath) => {
+  const file = fs.createWriteStream(downloadPath);
+  return new Promise((resolve, reject) => {
+    https.get(fileURL, function (response) {
+      response.pipe(file);
+      file
+        .on("finish", function () {
+          file.close();
+          resolve();
+        })
+        .on("error", function () {
+          reject();
+        });
+    });
+  });
+};
 
 const fn = async () => {
   await geturl();
   let info = await getQuotes();
-  console.log(info);
-
-  console.log("准备导入数据到excel");
-  // 商品链接	商品名称	商品头图	头图视频	SKU名称	SKU价格	SKU图片	跨境属性	商品属性	视频	商品描述
-  var data = [
-    {
-      name: "sheet1",
-      data: [
-        [
-          url,
-          info.title,
-          info.headImg,
-          info.video,
-          info.skus,
-          info.crossBorder,
-          info.productAttr,
-          info.detailVieo,
-          info.detailImgs,
-        ],
-      ],
-    },
-  ];
-  var buffer = xlsx.build(data);
-  // 写入文件
-  fs.writeFile(infourl + "info.xlsx", buffer, function (err) {
-    if (err) {
-      console.log("写入失败： " + err);
-      return;
-    }
-    console.log("写入成功");
-  });
+  // console.log(info);
+  // console.log("准备导入数据到excel");
+  // // 商品链接	商品名称	商品头图	头图视频	SKU名称	SKU价格	SKU图片	跨境属性	商品属性	视频	商品描述
+  // var data = [
+  //   {
+  //     name: "sheet1",
+  //     data: [
+  //       [
+  //         url,
+  //         info.title,
+  //         info.headImg,
+  //         info.video,
+  //         info.skus,
+  //         info.crossBorder,
+  //         info.productAttr,
+  //         info.detailVieo,
+  //         info.detailImgs,
+  //       ],
+  //     ],
+  //   },
+  // ];
+  // var buffer = xlsx.build(data);
+  // // 写入文件
+  // fs.writeFile(infourl + "info.xlsx", buffer, function (err) {
+  //   if (err) {
+  //     console.log("写入失败： " + err);
+  //     return;
+  //   }
+  //   console.log("写入成功");
+  // });
 
   console.log("准备下载视频和图片");
+  if (!fs.existsSync(infourl + info.title)) fs.mkdirSync(infourl + info.title);
+  console.log("下载头图视频和图片");
+
+  if (!fs.existsSync(infourl + info.title + "/头图"))
+    fs.mkdirSync(infourl + info.title + "/头图");
+  await Promise.all(
+    info.headImg.map(async (item, index) => {
+      const fileURL = item;
+      const fileName = index + ".png";
+      const downloadPath = infourl + info.title + "/头图/" + fileName;
+      await requestPromise(fileURL, downloadPath);
+    })
+  );
+
+  console.log("下载sku图片");
+  if (!fs.existsSync(infourl + info.title + "/sku图片"))
+    fs.mkdirSync(infourl + info.title + "/sku图片");
+
+  await Promise.all(
+    info.skus.map(async (item, index) => {
+      const fileURL = item.img;
+      const fileName = item.name + ".png";
+      const downloadPath = infourl + info.title + "/sku图片/" + fileName;
+      await requestPromise(fileURL, downloadPath);
+    })
+  );
+
+  console.log("下载商品详情图片");
+  if (!fs.existsSync(infourl + info.title + "/商品详情图片"))
+    fs.mkdirSync(infourl + info.title + "/商品详情图片");
+
+  await Promise.all(
+    info.detailImgs.map(async (item, index) => {
+      const fileURL = item;
+      const fileName = index + ".png";
+      const downloadPath = infourl + info.title + "/商品详情图片/" + fileName;
+      await requestPromise(fileURL, downloadPath);
+    })
+  );
 
   console.log(url);
   console.log(infourl);
