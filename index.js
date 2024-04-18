@@ -1,6 +1,10 @@
-// import puppeteer from "puppeteer";
 const puppeteer = require("puppeteer");
+const { input } = require("@inquirer/prompts");
+const fs = require("fs");
+const xlsx = require("node-xlsx");
 
+let infourl = ""; // 文件地址
+let url = "";
 let page = null;
 let btn_position = null;
 let times = 0; // 执行重新滑动的次数
@@ -11,18 +15,17 @@ function sleep(ms) {
 
 const getQuotes = async () => {
   const browser = await puppeteer.launch({
-    headless: false, //使无头浏览器可见，便于开发过程中观察
+    headless: true, //使无头浏览器可见，便于开发过程中观察
     args: ["--disable-infobars"],
   });
 
   const page = await browser.newPage(); //打开新的空白页
-  await page.goto(
-    "https://detail.1688.com/offer/682775226398.html?spm=a360q.8274423.0.0.7b854c9a4vJrSY",
-    { waitUntil: "networkidle0", timeout: 5000 }
-  ); //访问页面
+  await page.goto(url, { waitUntil: "networkidle0", timeout: 5000 }); //访问页面
   await page.evaluate(() => {
     Object.defineProperty(navigator, "webdriver", { get: () => false });
   });
+
+  console.log("准备跳过验证");
   // 获取滑块大小
   distance = await page.evaluate(() => {
     function compare(document) {
@@ -62,16 +65,32 @@ const getQuotes = async () => {
     page.mouse.move(btn_position.btn_left + distance, btn_position.btn_top, {
       steps: 45,
     });
-    await sleep(3000);
+    await sleep(1000);
     page.mouse.up();
   }
 
+  // check = await page.evaluate(() => {
+  //   let Width = 0;
+  //   if (document.querySelector("#nc_1__scale_text")) {
+  //     const { clientWidth } = document.querySelector("#nc_1__scale_text");
+  //     Width = clientWidth;
+  //   }
+  //   return Width;
+  // });
+  // if (check != 0) {
+  //   console.log("跳过验证失败");
+  // } else {
+  //   console.log("跳过验证,等待页面加载");
+  // }
+  console.log("跳过验证,等待页面加载");
   // 等页面加载
   await sleep(5000);
   page.evaluate((_) => {
     window.scrollBy(0, window.innerHeight);
   });
   await sleep(1000);
+
+  console.log("展开sku");
   // 展开sku  获取位置并点击
   extendButton = await page.evaluate(() => {
     function compare(document) {
@@ -96,6 +115,7 @@ const getQuotes = async () => {
     page.mouse.click(postion.btn_left + 5, postion.btn_top + 3);
   }
 
+  console.log("展开商品属性");
   // 商品属性部分的展开
   attrSwitch = await page.evaluate(() => {
     function compare(document) {
@@ -117,15 +137,28 @@ const getQuotes = async () => {
     });
     page.mouse.click(postion.btn_left + 5, postion.btn_top + 3);
   }
-
   // 获取数据部分
   json = await page.evaluate(() => {
+    console.log("获取头图");
+
     const video = document.querySelector(
       ".detail-video-wrapper .lib-video video"
     )?.src; // 头图视频
+
+    let headImg = [];
+    headImgDom = document.querySelectorAll(
+      ".detail-gallery-turn-outter-wrapper .detail-gallery-turn-wrapper"
+    );
+    headImgDom &&
+      headImgDom.forEach((item) => {
+        headImg.push(item.querySelector(".detail-gallery-img").src);
+      });
+
     const title = document.querySelector(
       ".od-pc-offer-title-contain .title-text"
     )?.textContent; // 商品标题
+
+    console.log("获取sku");
     // 处理sku
     const skusDom = document.querySelectorAll(
       "#sku-count-widget-wrapper .sku-item-wrapper"
@@ -143,6 +176,8 @@ const getQuotes = async () => {
             .style.background.match(reg)[0],
         });
       });
+
+    console.log("获取跨境属性");
     // 跨境属性
     const borderDom = document.querySelectorAll(
       ".od-pc-offer-cross .offer-attr-list .offer-attr-item"
@@ -153,6 +188,9 @@ const getQuotes = async () => {
         crossBorder[item.querySelector(".offer-attr-item-name").textContent] =
           item.querySelector(".offer-attr-item-value").textContent;
       });
+
+    console.log("获取商品属性");
+
     // 商品属性
     const productDom = document.querySelectorAll(
       ".od-pc-attribute .offer-attr .offer-attr-list .offer-attr-item"
@@ -163,11 +201,13 @@ const getQuotes = async () => {
         productAttr[item.querySelector(".offer-attr-item-name").textContent] =
           item.querySelector(".offer-attr-item-value").textContent;
       });
+    console.log("获取视频展示");
 
     // 视频展示
     detailVieo = document.querySelector(
       ".detail-video-module .detail-video-wrapper video"
     )?.src;
+    console.log("获取商品信息图");
 
     // 商品信息图
     let detailImgs = [];
@@ -178,9 +218,10 @@ const getQuotes = async () => {
       detailImgDom.forEach((item) => {
         detailImgs.push(item?.dataset?.lazyloadSrc);
       });
-
+    console.log("获取结束");
     return {
       video,
+      headImg,
       title,
       skus,
       crossBorder,
@@ -189,7 +230,67 @@ const getQuotes = async () => {
       detailImgs,
     };
   });
-  console.log(json);
+
+  return json;
 };
 
-getQuotes();
+const getinfo = async () => {
+  infourl = await input({
+    message: "输入包含info.xlsx的文件夹地址，例如~/Downloads/",
+  });
+};
+
+const geturl = async () => {
+  url = await input({
+    message: "输入商品的地址：",
+  });
+};
+
+const fn = async () => {
+  await geturl();
+  let info = await getQuotes();
+  console.log(info);
+
+  console.log("准备导入数据到excel");
+  // 商品链接	商品名称	商品头图	头图视频	SKU名称	SKU价格	SKU图片	跨境属性	商品属性	视频	商品描述
+  var data = [
+    {
+      name: "sheet1",
+      data: [
+        [
+          url,
+          info.title,
+          info.headImg,
+          info.video,
+          info.skus,
+          info.crossBorder,
+          info.productAttr,
+          info.detailVieo,
+          info.detailImgs,
+        ],
+      ],
+    },
+  ];
+  var buffer = xlsx.build(data);
+  // 写入文件
+  fs.writeFile(infourl + "info.xlsx", buffer, function (err) {
+    if (err) {
+      console.log("写入失败： " + err);
+      return;
+    }
+    console.log("写入成功");
+  });
+
+  console.log("准备下载视频和图片");
+
+  console.log(url);
+  console.log(infourl);
+  fn();
+};
+
+main = async () => {
+  await getinfo();
+  fn();
+};
+
+main();
