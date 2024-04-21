@@ -269,23 +269,24 @@ const fn = async () => {
   let info = await getQuotes();
   console.log(info);
   console.log("准备导入数据到excel");
+  var sheets = xlsx.parse(infourl + "info.xlsx");
+  var normalData = sheets[0].data;
   // 商品链接	商品名称	商品头图	头图视频	SKU名称	SKU价格	SKU图片	跨境属性	商品属性	视频	商品描述
+  normalData.push([
+    url,
+    info.title,
+    info.headImg.join(";"),
+    info.video,
+    JSON.stringify(info.skus),
+    JSON.stringify(info.crossBorder),
+    JSON.stringify(info.productAttr),
+    info.detailVieo,
+    info.detailImgs.join(";"),
+  ]);
   var data = [
     {
       name: "sheet1",
-      data: [
-        [
-          url,
-          info.title,
-          info.headImg.join(";"),
-          info.video,
-          JSON.stringify(info.skus),
-          JSON.stringify(info.crossBorder),
-          JSON.stringify(info.productAttr),
-          info.detailVieo,
-          info.detailImgs.join(";"),
-        ],
-      ],
+      data: normalData,
     },
   ];
   // console.log(JSON.stringify(data));
