@@ -1,0 +1,5 @@
+node环境 v20.12.2 直接https://nodejs.org/en 下载
+
+首次运行前需要 yarn install / npm install 安装依赖
+
+运行 node index.js
